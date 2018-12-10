@@ -1,0 +1,9 @@
+[package]
+name = "advent_of_code2018"
+version = "0.1.0"
+authors = ["Fredrik Jansson <frjansso@cisco.com>"]
+
+[dependencies]
+combine = "*"
+regex = "*"
+lazy_static = "*"
