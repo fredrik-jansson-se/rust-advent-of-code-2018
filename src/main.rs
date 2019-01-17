@@ -6,6 +6,7 @@ use std::env;
 // mod aoc1;
 // mod aoc2;
 mod aoc3;
+mod aoc5;
 // mod aoc16;
 // mod aoc18;  
 // mod aoc19;
@@ -29,6 +30,7 @@ fn main() {
         // 1 => aoc1::run(),
         // 2 => aoc2::run(),
         3 => aoc3::run(),
+        5 => aoc5::run(),
         // 16 => aoc16::run(),
         // 18 => aoc18::run(),
         // 19 => aoc19::run(),
