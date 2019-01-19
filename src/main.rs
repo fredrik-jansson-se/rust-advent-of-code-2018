@@ -1,5 +1,6 @@
 extern crate regex;
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 
 use std::env;
 
@@ -10,7 +11,7 @@ mod aoc5;
 mod aoc6;
 mod aoc7;
 // mod aoc16;
-// mod aoc18;  
+// mod aoc18;
 // mod aoc19;
 // mod aoc20;
 // mod aoc21;
@@ -44,6 +45,6 @@ fn main() {
         // 23 => aoc23::run(),
         // 24 => aoc24::run(),
         // 25 => aoc25::run(),
-        _ => ()
+        _ => (),
     }
 }

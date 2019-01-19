@@ -14,20 +14,19 @@ fn run_1(input: String) -> String {
 
     let mut i = 0;
     // println!("var.len() {}", var.len());
-    while (i+1) < var.len() {
+    while (i + 1) < var.len() {
         let c1 = var[i] as i32;
-        let c2 = var[i+1] as i32;
+        let c2 = var[i + 1] as i32;
         if c1 - c2 == 32 || c2 - c1 == 32 {
             // println!("1: {}", str::from_utf8(&var).unwrap());
-            var.remove(i+1);
+            var.remove(i + 1);
             var.remove(i);
             // println!("2: {}", str::from_utf8(&var).unwrap());
             // println!("i: {}", i);
             if i > 0 {
                 i -= 1;
             }
-        }
-        else {
+        } else {
             i += 1;
         }
     }
@@ -39,7 +38,10 @@ fn run_2(input: String) -> usize {
     let letters = "abcdefghijklmnopqrstuvwxyz";
     let mut min_len = input.len();
     for c in letters.chars() {
-        let filter_input : String = input.chars().filter(|ic| (*ic != c) & (*ic != c.to_ascii_uppercase())).collect();
+        let filter_input: String = input
+            .chars()
+            .filter(|ic| (*ic != c) & (*ic != c.to_ascii_uppercase()))
+            .collect();
         let l = run_1(filter_input).len();
         if l < min_len {
             min_len = l;

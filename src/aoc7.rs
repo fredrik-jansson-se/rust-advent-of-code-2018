@@ -4,13 +4,12 @@ use std::str;
 
 use lazy_static;
 
-
 pub fn run() {
     let input = fs::read_to_string("day7.txt").unwrap();
     println!("day7-1: {}", run_1(&input));
 }
 
-fn parse_line(line: &str) -> (char, char) {
+fn parse_line(_line: &str) -> (char, char) {
     lazy_static! {
         static ref RE: Regex = Regex::new(r#"Step\s(\w).*step\s(\w).*\."#).unwrap();
     }
