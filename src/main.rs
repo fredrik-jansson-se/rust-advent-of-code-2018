@@ -24,6 +24,7 @@ mod aoc22;
 // mod aoc23;
 // mod aoc24;
 // mod aoc25;
+mod helper;
 
 fn main() {
     let mut a = env::args();

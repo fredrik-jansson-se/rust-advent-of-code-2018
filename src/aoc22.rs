@@ -2,31 +2,31 @@ pub fn run() {
     println!("22:1 {}", run_1(11991, (6, 797)));
 }
 
-#[derive(Debug, PartialEq, Clone)]
-enum Type {
-    //    Unknown,
-    Rocky,
-    Wet,
-    Narrow,
-}
+// #[derive(Debug, PartialEq, Clone)]
+// enum Type {
+//     //    Unknown,
+//     Rocky,
+//     Wet,
+//     Narrow,
+// }
 
-impl Type {
-    fn new(erosion_level: usize) -> Self {
-        match erosion_level % 3 {
-            0 => Type::Rocky,
-            1 => Type::Wet,
-            _ => Type::Narrow,
-        }
-    }
+// impl Type {
+//     fn new(erosion_level: usize) -> Self {
+//         match erosion_level % 3 {
+//             0 => Type::Rocky,
+//             1 => Type::Wet,
+//             _ => Type::Narrow,
+//         }
+//     }
 
-    fn risk_level(&self) -> usize {
-        match self {
-            Type::Rocky => 0,
-            Type::Wet => 1,
-            Type::Narrow => 2,
-        }
-    }
-}
+//     fn risk_level(&self) -> usize {
+//         match self {
+//             Type::Rocky => 0,
+//             Type::Wet => 1,
+//             Type::Narrow => 2,
+//         }
+//     }
+// }
 
 type Map = Vec<Vec<u64>>;
 
