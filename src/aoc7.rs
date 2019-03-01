@@ -8,7 +8,8 @@ use lazy_static;
 pub fn run() {
     let input = fs::read_to_string("day7.txt").unwrap();
     println!("day7-1: {}", run_1(&input));
-    println!("day7-2: {}", run_2(&input, 4, 60));
+    // 2862
+    println!("day7-2: {}", run_2(&input, 5, 60));
 }
 
 fn parse_line(line: &str) -> (String, String) {
@@ -58,7 +59,28 @@ pub fn run_1(input: &str) -> String {
     res.join("")
 }
 
-pub fn run_2(input: &str, _workers: u32, _base_cost: u32) -> u32 {
+#[derive(Debug, Clone)]
+struct WorkItem {
+    name: String,
+    seconds_left: usize,
+}
+
+impl WorkItem {
+    fn new(name: &str, base_cost: usize) -> Self {
+        WorkItem {
+            name: name.to_owned(),
+            seconds_left: base_cost + step_cost(name.chars().next().unwrap()),
+        }
+    }
+
+    fn tick(&mut self) -> bool {
+        // dbg! { &self };
+        self.seconds_left-= 1;
+        self.seconds_left == 0
+    }
+}
+
+pub fn run_2(input: &str, num_workers: usize, base_cost: usize) -> u32 {
     let components: Vec<(String, String)> = input.lines().map(parse_line).collect();
     let mut lookup: HashMap<String, BTreeSet<String>> = HashMap::new();
     let mut open = BTreeSet::new();
@@ -78,22 +100,59 @@ pub fn run_2(input: &str, _workers: u32, _base_cost: u32) -> u32 {
         }
     }
 
-    let mut res: Vec<String> = Vec::new();
-    let sum = 0;
+    // dbg!{ &open };
 
-    while !open.is_empty() {
+    let mut workers = vec![None; num_workers];
+
+    {
         let o = open.iter().next().unwrap().clone();
         open.remove(&o);
-        if let Some(children) = lookup.get(&o) {
-            for v in children.iter() {
-                open.insert(v.clone());
+        workers[0]=Some(WorkItem::new(&o, base_cost));
+    }
+
+    let mut sum = 0;
+
+    loop {
+        if workers.iter().all(|i| i.is_none()) {
+            break;
+        }
+        sum += 1;
+
+        for w in workers.iter_mut() {
+            match w {
+                Some(wi) => if wi.tick() {
+                    // This is done, get the children
+                    if let Some(children) = lookup.get(&wi.name) {
+                        for v in children.iter() {
+                            open.insert(v.clone());
+                        }
+                    }
+                    if open.len() > 0 {
+                        let o = open.iter().next().unwrap().clone();
+                        open.remove(&o);
+                        *w=Some(WorkItem::new(&o, base_cost));
+                    }
+                    else {
+                        *w = None;
+                    }
+                }
+                None => {
+                    if open.len() > 0 {
+                        let o = open.iter().next().unwrap().clone();
+                        open.remove(&o);
+                        *w=Some(WorkItem::new(&o, base_cost));
+                    }
+                }
             }
         }
-        res = res.into_iter().filter(|c| *c != o).collect();
-        res.push(o);
     }
 
     sum
+}
+
+fn step_cost(c: char) -> usize {
+    let lookup = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    lookup.find(c).unwrap() + 1
 }
 
 #[cfg(test)]
@@ -122,6 +181,8 @@ Step F must be finished before step E can begin."#;
 
     #[test]
     fn aoc7_run_2() {
+        assert_eq!(step_cost('A'), 1);
+        assert_eq!(step_cost('B'), 2);
         let input = r#"Step C must be finished before step A can begin.
 Step C must be finished before step F can begin.
 Step A must be finished before step B can begin.
