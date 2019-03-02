@@ -1,7 +1,6 @@
 use nom::types::CompleteStr;
 use nom::*;
 
-
 fn signed_to_val(s: (Option<CompleteStr>, CompleteStr)) -> Result<i32, std::num::ParseIntError> {
     match s.0 {
         Some(CompleteStr("-")) => s.1.parse::<i32>().map(|v| -v),

@@ -6,6 +6,12 @@ use std::env;
 
 // mod aoc1;
 // mod aoc2;
+mod aoc10;
+mod aoc11;
+mod aoc12;
+mod aoc13;
+mod aoc15;
+mod aoc16;
 mod aoc3;
 mod aoc4;
 mod aoc5;
@@ -13,12 +19,6 @@ mod aoc6;
 mod aoc7;
 mod aoc8;
 mod aoc9;
-mod aoc10;
-mod aoc11;
-mod aoc12;
-mod aoc13;
-mod aoc15;
-// mod aoc16;
 // mod aoc18;
 // mod aoc19;
 // mod aoc20;
@@ -28,6 +28,7 @@ mod aoc22;
 // mod aoc24;
 // mod aoc25;
 mod helper;
+mod opcodes;
 
 fn main() {
     let mut a = env::args();
@@ -53,7 +54,7 @@ fn main() {
         12 => aoc12::run(),
         13 => aoc13::run(),
         15 => aoc15::run(),
-        // 16 => aoc16::run(),
+        16 => aoc16::run(),
         // 18 => aoc18::run(),
         // 19 => aoc19::run(),
         // 20 => aoc20::run(),
