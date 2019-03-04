@@ -79,3 +79,8 @@ pub fn eqrr(regs: &mut Registers, a: usize, b: usize, c: usize) {
     let v = if regs[&a] == regs[&b] { 1 } else { 0 };
     regs.insert(c, v);
 }
+
+pub fn neqr(regs: &mut Registers, a: usize, b: usize, c: usize) {
+    let v = if regs[&a] != regs[&b] { 1 } else { 0 };
+    regs.insert(c, v);
+}

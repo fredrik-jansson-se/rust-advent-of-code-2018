@@ -15,6 +15,10 @@ named!(pub u32_val<CompleteStr, u32>,
        map_res!(digit, |s: CompleteStr| { s.parse::<u32>()} )
        );
 
+named!(pub usize_val<CompleteStr, usize>,
+       map_res!(digit, |s: CompleteStr| { s.parse::<usize>()} )
+       );
+
 #[cfg(test)]
 mod tests {
     use super::*;
