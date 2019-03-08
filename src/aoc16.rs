@@ -3,7 +3,7 @@ use nom::*;
 use std::collections::HashMap;
 use std::fs;
 
-use super::helper::u32_val;
+use super::helper::usize_val;
 use super::opcodes::*;
 
 pub fn run() {
@@ -12,10 +12,6 @@ pub fn run() {
     println!("16:1 - {}", run_1(&input));
     println!("16:2 - {}", run_2(&input));
 }
-
-// fn print_regs(r: &Registers) {
-//     println!("{} {} {} {}", r[&0], r[&1], r[&2], r[&3]);
-// }
 
 fn run_1(input: &str) -> usize {
     let (_, samples) = parse_samples(CompleteStr(input)).unwrap();
@@ -66,14 +62,10 @@ fn run_2(input: &str) -> usize {
             op_lookup.insert(sample.instruction.opcode, (0..ops.len()).collect());
         }
 
-        let old_len = op_lookup.get(&sample.instruction.opcode).unwrap().len();
-
         op_lookup
             .get_mut(&sample.instruction.opcode)
             .unwrap()
             .retain(|op| is_match(&ops[*op], &sample));
-        let new_len = op_lookup.get(&sample.instruction.opcode).unwrap().len();
-        // println!("{}: {} -> {}", sample.instruction.opcode, old_len, new_len);
     }
 
     let mut code_to_op: HashMap<usize, usize> = HashMap::new();
@@ -92,18 +84,13 @@ fn run_2(input: &str) -> usize {
         }
     }
 
-    let mut regs = Registers::new();
+    let mut regs = vec![0, 0, 0, 0];
 
     for i in program.instructions {
-        for r in &[i.a, i.b, i.c] {
-            if !regs.contains_key(r) {
-                regs.insert(*r, 0);
-            }
-        }
         ops[code_to_op[&i.opcode]](&mut regs, i.a, i.b, i.c);
     }
 
-    regs[&0]
+    regs[0]
 }
 
 fn is_match(op: &OP, sample: &Sample) -> bool {
@@ -117,19 +104,20 @@ fn is_match(op: &OP, sample: &Sample) -> bool {
     r == sample.after
 }
 
-named!(space_u32_val<CompleteStr, u32>, do_parse!(
+named!(space_usize_val<CompleteStr, usize>, do_parse!(
         opt!(space) >>
-        v: u32_val >>
+        v: usize_val >>
         (v)
         ));
 
 named!(parse_regs<CompleteStr, Registers>, do_parse!(
         tag!("[") >>
-        vals: separated_list!(tag!(","), space_u32_val) >>
+        vals: separated_list!(tag!(","), space_usize_val) >>
         tag!("]") >>
         (
-            vals.iter().enumerate().fold(Registers::new(),
-            |mut r, (i,v)| {r.insert(i, *v as usize); r} )
+            vals
+            // vals.iter().enumerate().fold(Registers::new(),
+            // |mut r, (i,v)| {r.insert(i, *v as usize); r} )
             )
         ));
 
@@ -163,16 +151,17 @@ struct Instruction {
 
 named!(
     parse_instruction < CompleteStr, Instruction>, do_parse!(
-        vals: separated_list!(tag!(" "), u32_val) >>
+        vals: separated_list!(tag!(" "), usize_val) >>
         tag!("\n") >>
         (Instruction {
-            opcode: vals[0] as usize,
-            a: vals[1] as usize,
-            b: vals[2] as usize,
-            c: vals[3] as usize,
+            opcode: vals[0],
+            a: vals[1],
+            b: vals[2],
+            c: vals[3],
         })
     ));
 
+#[derive(Debug)]
 struct Sample {
     before: Registers,
     instruction: Instruction,
@@ -214,15 +203,15 @@ mod tests {
     #[test]
     fn aoc16_parse() {
         assert_eq!(
-            space_u32_val(CompleteStr(" 123")),
+            space_usize_val(CompleteStr(" 123")),
             Ok((CompleteStr(""), 123))
         );
 
         let (_, regs) = parse_regs(CompleteStr("[3, 2, 1, 1]")).unwrap();
-        assert_eq!(regs[&0], 3);
-        assert_eq!(regs[&1], 2);
-        assert_eq!(regs[&2], 1);
-        assert_eq!(regs[&3], 1);
+        assert_eq!(regs[0], 3);
+        assert_eq!(regs[1], 2);
+        assert_eq!(regs[2], 1);
+        assert_eq!(regs[3], 1);
 
         let (_, bregs) = parse_before(CompleteStr("  Before: [3, 2, 1, 1]\n")).unwrap();
         assert_eq!(regs, bregs);
