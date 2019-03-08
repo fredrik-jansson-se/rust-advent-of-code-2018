@@ -8,7 +8,7 @@ use crate::opcodes;
 pub fn run() {
     let input = fs::read_to_string("day19.txt").unwrap();
     println!("19:1 - {}", run_1(&input, 0));
-    // println!("19:2 - {}", run_1(&input, 1));
+    println!("19:2 - {}", run_1(&input, 1));
 }
 
 named!(parse_ip<CompleteStr, usize>, do_parse!(
@@ -40,7 +40,6 @@ fn run_1(input: &str, reg0_start: usize) -> usize {
 
     while regs[ip] < instructions.len() {
         let (i, v) = &instructions[regs[ip]];
-        // println!("iptr: {} - {:?}", iptr, v);
         match i.as_ref() {
             "addi" => opcodes::addi(&mut regs, v[0], v[1], v[2]),
             "addr" => opcodes::addr(&mut regs, v[0], v[1], v[2]),
