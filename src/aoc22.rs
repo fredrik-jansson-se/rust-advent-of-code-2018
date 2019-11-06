@@ -224,13 +224,15 @@ mod tests {
 
     #[test]
     fn aoc22_expand_map() {
-        let mut map = create_map(10, 10);
-        assert_eq!(map.len(), 10);
-        assert_eq!(map[0].len(), 10);
+        let old_hw = 10;
+        let mut map = create_map(old_hw, old_hw);
+        assert_eq!(map.len(), old_hw);
+        assert_eq!(map[0].len(), old_hw);
         expand_map(&mut map, &(10, 10), 510);
-        assert_eq!(map.len(), 20);
-        assert_eq!(map[0].len(), 20);
-        assert_eq!(map[10].len(), 20);
+        let new_hw = 4 * old_hw;
+        assert_eq!(map.len(), new_hw);
+        assert_eq!(map[0].len(), new_hw);
+        assert_eq!(map[10].len(), new_hw);
     }
 
     #[test]
