@@ -13,8 +13,7 @@ pub fn addi(regs: &mut Registers, a: usize, b: usize, c: usize) {
 }
 
 pub fn mulr(regs: &mut Registers, a: usize, b: usize, c: usize) {
-    let v = regs[a] * regs[b];
-    regs[c] = v;
+    regs[c] = regs[a] * regs[b];
 }
 
 pub fn muli(regs: &mut Registers, a: usize, b: usize, c: usize) {
@@ -61,8 +60,7 @@ pub fn gtri(regs: &mut Registers, a: usize, b: usize, c: usize) {
 }
 
 pub fn gtrr(regs: &mut Registers, a: usize, b: usize, c: usize) {
-    let v = if regs[a] > regs[b] { 1 } else { 0 };
-    regs[c] = v;
+    regs[c] = if regs[a] > regs[b] { 1 } else { 0 };
 }
 
 pub fn eqir(regs: &mut Registers, a: usize, b: usize, c: usize) {
