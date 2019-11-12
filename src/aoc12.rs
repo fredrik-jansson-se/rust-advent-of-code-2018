@@ -1,7 +1,12 @@
 use std::fs;
 use std::ops::{Index, IndexMut};
 
-use nom::types::CompleteStr;
+use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::space0;
+use nom::character::complete::space1;
+use nom::combinator::opt;
+use nom::multi::{many1, many_m_n};
 use nom::*;
 
 pub fn run() {
@@ -93,30 +98,36 @@ struct Input {
     rules: Vec<Rule>,
 }
 
-named!(boolean<CompleteStr, bool>, do_parse!(
-        t: alt!(tag!(".") | tag!("#")) >>
-        (match t {
-            CompleteStr(".") => false,
-            _ => true,
-        })
-        ));
+fn boolean(i: &str) -> IResult<&str, bool> {
+    nom::combinator::map(alt((tag("."), tag("#"))), |t| match t {
+        "." => false,
+        _ => true,
+    })(i)
+    // let (i, t) = alt((tag("."), tag("#")))(i)?;
+    // Ok((
+    //     i,
+    //     match t {
+    //         "." => false,
+    //         _ => true,
+    //     },
+    // ))
+}
 
-named!(mtch<CompleteStr, Vec<bool> >, many_m_n!(5, 5, boolean));
+fn mtch(i: &str) -> IResult<&str, Vec<bool>> {
+    many_m_n(5, 5, boolean)(i)
+}
 
 // ...## => #
-named!(rule<CompleteStr, Rule>, do_parse!(
-        opt!(space) >>
-        m: mtch >>
-        space >>
-        tag!("=>") >>
-        space >>
-        o: boolean >>
-        opt!(tag!("\n")) >>
-        ( Rule {
-            mtch: m,
-            output: o
-        })
-        ));
+fn rule(i: &str) -> IResult<&str, Rule> {
+    let (i, _) = space0(i)?;
+    let (i, m) = mtch(i)?;
+    let (i, _) = space1(i)?;
+    let (i, _) = tag("=>")(i)?;
+    let (i, _) = space1(i)?;
+    let (i, o) = boolean(i)?;
+    let (i, _) = opt(tag("\n"))(i)?;
+    Ok((i, Rule { mtch: m, output: o }))
+}
 
 fn create_vec(init: &[bool]) -> Vec<bool> {
     let mut res = vec![false; init.len() + 2];
@@ -127,15 +138,22 @@ fn create_vec(init: &[bool]) -> Vec<bool> {
     res
 }
 
-named!(parse<CompleteStr, Input>, do_parse!(
-        tag!("initial state:") >>
-        space >>
-        initial_state: many1!(boolean) >>
-        tag!("\n") >>
-        tag!("\n") >>
-        rules: many1!(rule) >>
-        ( Input { initial_state: OffsetVec::new(&initial_state, false), rules: rules } )
-        ));
+fn parse(i: &str) -> IResult<&str, Input> {
+    let (i, _) = tag("initial state:")(i)?;
+    let (i, _) = space1(i)?;
+    let (i, initial_state) = many1(boolean)(i)?;
+    let (i, _) = tag("\n\n")(i)?;
+    // >> tag("\n")
+    // >> tag("\n")
+    let (i, rules) = many1(rule)(i)?;
+    Ok((
+        i,
+        Input {
+            initial_state: OffsetVec::new(&initial_state, false),
+            rules: rules,
+        },
+    ))
+}
 
 fn print_state(state: &[bool]) {
     for i in 2..(state.len() - 2) {
@@ -149,7 +167,7 @@ fn print_state(state: &[bool]) {
 }
 
 fn run_1(_input_str: &str, _iterations: usize) -> usize {
-    // let (_, input) = parse(CompleteStr(input_str)).unwrap();
+    // let (_, input) = parse(input_str)).unwrap();
     // let mut state = input.initial_state;
     // for _ in 0..iterations {
     //     let mut new_v = state.clone();
@@ -200,16 +218,16 @@ mod tests {
 
     #[test]
     fn aoc12_parse() {
-        assert_eq!(boolean(CompleteStr(".")), Ok((CompleteStr(""), false)));
-        assert_eq!(boolean(CompleteStr("#")), Ok((CompleteStr(""), true)));
+        assert_eq!(boolean("."), Ok(("", false)));
+        assert_eq!(boolean("#"), Ok(("", true)));
         assert_eq!(
-            mtch(CompleteStr(".#.#.")),
-            Ok((CompleteStr(""), vec![false, true, false, true, false]))
+            mtch(".#.#."),
+            Ok(("", vec![false, true, false, true, false]))
         );
         assert_eq!(
-            rule(CompleteStr(".###. => #")),
+            rule(".###. => #"),
             Ok((
-                CompleteStr(""),
+                "",
                 Rule {
                     mtch: vec![false, true, true, true, false],
                     output: true
@@ -217,9 +235,9 @@ mod tests {
             ))
         );
         assert_eq!(
-            rule(CompleteStr("#.#.# => .")),
+            rule("#.#.# => ."),
             Ok((
-                CompleteStr(""),
+                "",
                 Rule {
                     mtch: vec![true, false, true, false, true],
                     output: false
@@ -227,8 +245,8 @@ mod tests {
             ))
         );
 
-        let parse_res = parse(CompleteStr(init_data())).unwrap();
-        assert_eq!(parse_res.0, CompleteStr(""));
+        let parse_res = parse(init_data()).unwrap();
+        assert_eq!(parse_res.0, "");
         assert_eq!(parse_res.1.rules.len(), 14);
         assert_eq!(parse_res.1.initial_state.len(), 25);
         assert_eq!(parse_res.1.initial_state[0], true);

@@ -1,10 +1,13 @@
-use std::fs;
-use nom::types::CompleteStr;
-use nom::*;
-use std::ops::AddAssign;
 use super::helper::*;
+use nom::bytes::complete::tag;
+use nom::character::complete::space0;
+use nom::combinator::opt;
+use nom::multi::many1;
+use nom::*;
 use std::collections::HashSet;
+use std::fs;
 use std::iter::FromIterator;
+use std::ops::AddAssign;
 
 pub fn run() {
     let input = fs::read_to_string("day10.txt").unwrap();
@@ -38,30 +41,34 @@ impl Point {
 }
 
 // < 7,  0>
-named!(vector<CompleteStr, Vector>, do_parse!(
-        tag!("<") >>
-        opt!(space) >>
-        x: i32_val >>
-        tag!(",") >>
-        opt!(space) >>
-        y: i32_val >>
-        tag!(">") >>
-        ( Vector {x, y} )
-        ));
+fn vector(i: &str) -> IResult<&str, Vector> {
+    let (i, _) = tag("<")(i)?;
+    let (i, _) = space0(i)?;
+    let (i, x) = i32_val(i)?;
+    let (i, _) = tag(",")(i)?;
+    let (i, _) = space0(i)?;
+    let (i, y) = i32_val(i)?;
+    let (i, _) = tag(">")(i)?;
+    Ok((i, Vector { x, y }))
+}
 
 // position=< 7,  0> velocity=<-1,  0>
-named!(point<CompleteStr, Point>, do_parse!(
-        opt!(space) >>
-        tag!("position=") >>
-        pos: vector >>
-        opt!(space) >>
-        tag!("velocity=") >>
-        vel: vector >>
-        opt!(tag!("\n")) >>
-        ( Point { pos, vel })
-        ));
+fn point(i: &str) -> IResult<&str, Point> {
+    let (i, _) = space0(i)?;
+    let (i, _) = tag("position=")(i)?;
+    let (i, pos) = vector(i)?;
+    let (i, _) = space0(i)?;
+    let (i, _) = tag("velocity=")(i)?;
+    let (i, vel) = vector(i)?;
+    let (i, _) = opt(tag("\n"))(i)?;
+    Ok((i, Point { pos, vel }))
+}
 
-named!(points<CompleteStr, Vec<Point>>, many1!(point));
+fn points(i: &str) -> IResult<&str, Vec<Point>> {
+    many1(point)(i)
+}
+
+// <Vec<Point>>, many1!(point));
 
 fn bounds(points: &[Point]) -> (Vector, Vector) {
     let mut x_min = i32::max_value();
@@ -76,21 +83,18 @@ fn bounds(points: &[Point]) -> (Vector, Vector) {
         y_max = i32::max(y_max, p.pos.y);
     }
 
-
-    ( Vector { x: x_min, y: y_min},
-      Vector { x: x_max, y: y_max })
+    (Vector { x: x_min, y: y_min }, Vector { x: x_max, y: y_max })
 }
 
 fn print_field((min, max): &(Vector, Vector), points: &[Point]) {
-    let spoints : HashSet<(i32, i32)> = HashSet::from_iter(
-        points.iter().map(|p| (p.pos.x, p.pos.y)));
+    let spoints: HashSet<(i32, i32)> =
+        HashSet::from_iter(points.iter().map(|p| (p.pos.x, p.pos.y)));
 
-    for y in min.y..(max.y+1) {
-        for x in min.x..(max.x+1) {
+    for y in min.y..(max.y + 1) {
+        for x in min.x..(max.x + 1) {
             if spoints.contains(&(x, y)) {
                 print!("*");
-            }
-            else {
+            } else {
                 print!(".");
             }
         }
@@ -98,14 +102,14 @@ fn print_field((min, max): &(Vector, Vector), points: &[Point]) {
     }
 }
 
-fn bounds_area((min, max): &(Vector, Vector)) ->i64 {
+fn bounds_area((min, max): &(Vector, Vector)) -> i64 {
     let dx = (max.x - min.x).abs() as i64;
     let dy = (max.y - min.y).abs() as i64;
     dx * dy
 }
 
 fn run_1(input: &str) -> u32 {
-    let (_, mut pts) = points(CompleteStr(input)).unwrap();
+    let (_, mut pts) = points(input).unwrap();
 
     let mut last_area = i64::max_value();
     let mut last_pts = pts.clone();
@@ -115,7 +119,7 @@ fn run_1(input: &str) -> u32 {
         let bounds_area = bounds_area(&bounds);
         if last_area < bounds_area {
             print_field(&bounds, &last_pts);
-            return i-1;
+            return i - 1;
         }
         last_area = bounds_area;
 
@@ -131,7 +135,7 @@ fn run_1(input: &str) -> u32 {
 mod tests {
     use super::*;
     fn test_input() -> &'static str {
-    r#"position=< 9,  1> velocity=< 0,  2>
+        r#"position=< 9,  1> velocity=< 0,  2>
     position=< 7,  0> velocity=<-1,  0>
     position=< 3, -2> velocity=<-1,  1>
     position=< 6, 10> velocity=<-2, -1>
@@ -166,23 +170,41 @@ mod tests {
 
     #[test]
     fn aoc10_parse() {
-        assert_eq!(vector(CompleteStr("< 8, -9>")), Ok((CompleteStr(""), Vector {x: 8, y: -9})));
-        assert_eq!(vector(CompleteStr("<-8, 9>")), Ok((CompleteStr(""), Vector {x: -8, y: 9})));
-        assert_eq!(point(CompleteStr("position=<-3,  6> velocity=< 2, -1>\n")), Ok((CompleteStr(""), Point { pos: Vector {x: -3, y: 6}, vel: Vector { x: 2, y: -1}})));
-        assert_eq!(point(CompleteStr("position=<15,  0> velocity=<-2,  0>")), Ok((CompleteStr(""), Point { pos: Vector {x: 15, y: 0}, vel: Vector { x: -2, y: 0}})));
-        let (rest, pts) = points(CompleteStr(test_input())).unwrap();
-        assert_eq!(rest, CompleteStr(""));
+        assert_eq!(vector("< 8, -9>"), Ok(("", Vector { x: 8, y: -9 })));
+        assert_eq!(vector("<-8, 9>"), Ok(("", Vector { x: -8, y: 9 })));
+        assert_eq!(
+            point("position=<-3,  6> velocity=< 2, -1>\n"),
+            Ok((
+                "",
+                Point {
+                    pos: Vector { x: -3, y: 6 },
+                    vel: Vector { x: 2, y: -1 }
+                }
+            ))
+        );
+        assert_eq!(
+            point("position=<15,  0> velocity=<-2,  0>"),
+            Ok((
+                "",
+                Point {
+                    pos: Vector { x: 15, y: 0 },
+                    vel: Vector { x: -2, y: 0 }
+                }
+            ))
+        );
+        let (rest, pts) = points(test_input()).unwrap();
+        assert_eq!(rest, "");
         assert_eq!(pts.len(), 31);
     }
 
     #[test]
     fn aoc10_advance() {
         let mut p = Point {
-            pos: Vector { x: 3, y: 9},
-            vel: Vector { x: 1, y: -2}
+            pos: Vector { x: 3, y: 9 },
+            vel: Vector { x: 1, y: -2 },
         };
 
-        assert_eq!(p.advance().advance().advance().pos, Vector { x: 6, y: 3});
+        assert_eq!(p.advance().advance().advance().pos, Vector { x: 6, y: 3 });
     }
 
     #[test]

@@ -1,10 +1,13 @@
-use nom::types::CompleteStr;
-use nom::*;
 use std::collections::HashMap;
 use std::fs;
 
 use super::helper::usize_val;
 use super::opcodes::*;
+
+use nom::bytes::complete::tag;
+use nom::character::complete::space0;
+use nom::multi::{many1, separated_list};
+use nom::IResult;
 
 pub fn run() {
     let input = fs::read_to_string("day16.txt").unwrap();
@@ -14,7 +17,7 @@ pub fn run() {
 }
 
 fn run_1(input: &str) -> usize {
-    let (_, samples) = parse_samples(CompleteStr(input)).unwrap();
+    let (_, samples) = parse_samples(input).unwrap();
 
     let ops = [
         addr, addi, mulr, muli, banr, bani, borr, bori, setr, seti, gtir, gtri, gtrr, eqir, eqri,
@@ -48,7 +51,7 @@ fn run_1(input: &str) -> usize {
 type OP = fn(&mut Registers, usize, usize, usize);
 
 fn run_2(input: &str) -> usize {
-    let (_, program) = parse_program(CompleteStr(input)).unwrap();
+    let (_, program) = parse_program(input).unwrap();
 
     let ops = [
         addr, addi, mulr, muli, banr, bani, borr, bori, setr, seti, gtir, gtri, gtrr, eqir, eqri,
@@ -104,42 +107,38 @@ fn is_match(op: &OP, sample: &Sample) -> bool {
     r == sample.after
 }
 
-named!(space_usize_val<CompleteStr, usize>, do_parse!(
-        opt!(space) >>
-        v: usize_val >>
-        (v)
-        ));
+fn space_usize_val(i: &str) -> IResult<&str, usize> {
+    let (i, _) = space0(i)?;
+    let (i, v) = usize_val(i)?;
+    Ok((i, v))
+}
 
-named!(parse_regs<CompleteStr, Registers>, do_parse!(
-        tag!("[") >>
-        vals: separated_list!(tag!(","), space_usize_val) >>
-        tag!("]") >>
-        (
-            vals
-            // vals.iter().enumerate().fold(Registers::new(),
-            // |mut r, (i,v)| {r.insert(i, *v as usize); r} )
-            )
-        ));
+fn parse_regs(i: &str) -> IResult<&str, Registers> {
+    let (i, _) = tag("[")(i)?;
+    let (i, vals) = separated_list(tag(","), space_usize_val)(i)?;
+    let (i, _) = tag("]")(i)?;
+    Ok((i, vals))
+}
 
 // Before: [3, 2, 1, 1]
-named!(parse_before<CompleteStr, Registers>, do_parse!(
-    opt!(space) >>
-    tag!("Before:") >>
-    opt!(space) >>
-    regs: parse_regs >>
-    tag!("\n") >>
-    (regs)
-));
+fn parse_before(i: &str) -> IResult<&str, Registers> {
+    let (i, _) = space0(i)?;
+    let (i, _) = tag("Before:")(i)?;
+    let (i, _) = space0(i)?;
+    let (i, regs) = parse_regs(i)?;
+    let (i, _) = tag("\n")(i)?;
+    Ok((i, regs))
+}
 
 // After: [3, 2, 1, 1]
-named!(parse_after<CompleteStr, Registers>, do_parse!(
-    opt!(space) >>
-    tag!("After:") >>
-    opt!(space) >>
-    regs: parse_regs >>
-    tag!("\n") >>
-    (regs)
-));
+fn parse_after(i: &str) -> IResult<&str, Registers> {
+    let (i, _) = space0(i)?;
+    let (i, _) = tag("After:")(i)?;
+    let (i, _) = space0(i)?;
+    let (i, regs) = parse_regs(i)?;
+    let (i, _) = tag("\n")(i)?;
+    Ok((i, regs))
+}
 
 #[derive(Debug, PartialEq)]
 struct Instruction {
@@ -149,17 +148,19 @@ struct Instruction {
     c: usize,
 }
 
-named!(
-    parse_instruction < CompleteStr, Instruction>, do_parse!(
-        vals: separated_list!(tag!(" "), usize_val) >>
-        tag!("\n") >>
-        (Instruction {
+fn parse_instruction(i: &str) -> IResult<&str, Instruction> {
+    let (i, vals) = separated_list(tag(" "), usize_val)(i)?;
+    let (i, _) = tag("\n")(i)?;
+    Ok((
+        i,
+        Instruction {
             opcode: vals[0],
             a: vals[1],
             b: vals[2],
             c: vals[3],
-        })
-    ));
+        },
+    ))
+}
 
 #[derive(Debug)]
 struct Sample {
@@ -168,58 +169,63 @@ struct Sample {
     after: Registers,
 }
 
-named!(parse_sample<CompleteStr, Sample>, do_parse!(
-        before: parse_before >>
-        instruction: parse_instruction >>
-        after: parse_after >>
-        tag!("\n") >>
-        ( Sample {
+fn parse_sample(i: &str) -> IResult<&str, Sample> {
+    let (i, before) = parse_before(i)?;
+    let (i, instruction) = parse_instruction(i)?;
+    let (i, after) = parse_after(i)?;
+    let (i, _) = tag("\n")(i)?;
+    Ok((
+        i,
+        Sample {
             before,
             instruction,
-            after
-        })));
+            after,
+        },
+    ))
+}
 
-named!(
-    parse_samples<CompleteStr, Vec<Sample>>,
-    many1!(parse_sample)
-);
+fn parse_samples(i: &str) -> IResult<&str, Vec<Sample>> {
+    many1(parse_sample)(i)
+}
 
 struct Program {
     samples: Vec<Sample>,
     instructions: Vec<Instruction>,
 }
 
-named!(parse_program<CompleteStr, Program>, do_parse!(
-        samples: parse_samples >>
-        tag!("\n") >>
-        tag!("\n") >>
-        instructions: many1!(parse_instruction) >>
-        ( Program { samples, instructions } )
-        ));
+fn parse_program(i: &str) -> IResult<&str, Program> {
+    let (i, samples) = parse_samples(i)?;
+    let (i, _) = tag("\n\n")(i)?;
+    let (i, instructions) = many1(parse_instruction)(i)?;
+    Ok((
+        i,
+        Program {
+            samples,
+            instructions,
+        },
+    ))
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn aoc16_parse() {
-        assert_eq!(
-            space_usize_val(CompleteStr(" 123")),
-            Ok((CompleteStr(""), 123))
-        );
+        assert_eq!(space_usize_val(" 123"), Ok(("", 123)));
 
-        let (_, regs) = parse_regs(CompleteStr("[3, 2, 1, 1]")).unwrap();
+        let (_, regs) = parse_regs("[3, 2, 1, 1]").unwrap();
         assert_eq!(regs[0], 3);
         assert_eq!(regs[1], 2);
         assert_eq!(regs[2], 1);
         assert_eq!(regs[3], 1);
 
-        let (_, bregs) = parse_before(CompleteStr("  Before: [3, 2, 1, 1]\n")).unwrap();
+        let (_, bregs) = parse_before("  Before: [3, 2, 1, 1]\n").unwrap();
         assert_eq!(regs, bregs);
 
-        let (_, aregs) = parse_after(CompleteStr("After: [3, 2, 1, 1]\n")).unwrap();
+        let (_, aregs) = parse_after("After: [3, 2, 1, 1]\n").unwrap();
         assert_eq!(regs, aregs);
 
-        let (_, insts) = parse_instruction(CompleteStr("1 2 3 4\n")).unwrap();
+        let (_, insts) = parse_instruction("1 2 3 4\n").unwrap();
         assert_eq!(
             insts,
             Instruction {
@@ -230,10 +236,8 @@ mod tests {
             }
         );
 
-        let (_, sample) = parse_sample(CompleteStr(
-            "Before: [3, 2, 1, 1]\n9 2 1 2\nAfter:  [3, 2, 2, 1]\n\n",
-        ))
-        .unwrap();
+        let (_, _) =
+            parse_sample("Before: [3, 2, 1, 1]\n9 2 1 2\nAfter:  [3, 2, 2, 1]\n\n").unwrap();
     }
 
     #[test]

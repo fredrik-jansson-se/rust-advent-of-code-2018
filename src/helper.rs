@@ -1,36 +1,45 @@
-use nom::types::CompleteStr;
-use nom::*;
+use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::digit1;
+use nom::combinator::{map_res, opt};
+use nom::sequence::pair;
+use nom::IResult;
 
-fn signed_to_val(s: (Option<CompleteStr>, CompleteStr)) -> Result<i32, std::num::ParseIntError> {
+fn signed_to_val(s: (Option<&str>, &str)) -> Result<i32, std::num::ParseIntError> {
     match s.0 {
-        Some(CompleteStr("-")) => s.1.parse::<i32>().map(|v| -v),
+        Some("-") => s.1.parse::<i32>().map(|v| -v),
         _ => s.1.parse::<i32>(),
     }
 }
 
-named!(pub i32_val<CompleteStr, i32>,
-       map_res!(pair!(opt!(alt!(tag!("-") | tag!("+"))),  digit), signed_to_val));
+pub fn i32_val(i: &str) -> IResult<&str, i32> {
+    let a = alt((tag("-"), tag("+")));
+    map_res(pair(opt(a), digit1), signed_to_val)(i)
+}
 
-named!(pub u32_val<CompleteStr, u32>,
-       map_res!(digit, |s: CompleteStr| { s.parse::<u32>()} )
-       );
+// named!(pub i32_val<CompleteStr, i32>,
+//        map_res!(pair!(opt!(alt!(tag!("-") | tag!("+"))),  digit1), signed_to_val));
 
-named!(pub usize_val<CompleteStr, usize>,
-       map_res!(digit, |s: CompleteStr| { s.parse::<usize>()} )
-       );
+pub fn u32_val(i: &str) -> IResult<&str, u32> {
+    map_res(digit1, |s: &str| s.parse::<u32>())(i)
+}
+
+pub fn usize_val(i: &str) -> IResult<&str, usize> {
+    map_res(digit1, |s: &str| s.parse::<usize>())(i)
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn helper_parse_int32() {
-        assert_eq!(i32_val(CompleteStr("123")), Ok((CompleteStr(""), 123)));
-        assert_eq!(i32_val(CompleteStr("+123")), Ok((CompleteStr(""), 123)));
-        assert_eq!(i32_val(CompleteStr("-123")), Ok((CompleteStr(""), -123)));
+        assert_eq!(i32_val("123"), Ok(("", 123)));
+        assert_eq!(i32_val("+123"), Ok(("", 123)));
+        assert_eq!(i32_val("-123"), Ok(("", -123)));
     }
 
     #[test]
     fn helper_parse_uint32() {
-        assert_eq!(u32_val(CompleteStr("123")), Ok((CompleteStr(""), 123)));
+        assert_eq!(u32_val("123"), Ok(("", 123)));
     }
 }

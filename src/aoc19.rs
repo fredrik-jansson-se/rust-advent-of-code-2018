@@ -1,4 +1,7 @@
-use nom::types::CompleteStr;
+use nom::bytes::complete::tag;
+use nom::character::complete::{alphanumeric1, space1};
+use nom::multi::{many1, separated_list};
+use nom::sequence::pair;
 use nom::*;
 use std::fs;
 
@@ -11,26 +14,28 @@ pub fn run() {
     println!("19:2 - {}", run_1(&input, 1));
 }
 
-named!(parse_ip<CompleteStr, usize>, do_parse!(
-        tag!("#ip") >>
-        space >>
-        ip: usize_val >>
-        tag!("\n") >>
-        (ip)
-        ));
+fn parse_ip(i: &str) -> IResult<&str, usize> {
+    let (i, _) = tag("#ip")(i)?;
+    let (i, _) = space1(i)?;
+    let (i, ip) = usize_val(i)?;
+    let (i, _) = tag("\n")(i)?;
+    Ok((i, ip))
+}
 
-named!(parse_instruction<CompleteStr, (String, Vec<usize>)>, do_parse!(
-        instruction: alphanumeric >>
-        space >>
-        vals: separated_list!(tag!(" "), usize_val) >>
-        tag!("\n") >>
-        ((instruction.to_string(), vals))
-        ));
+fn parse_instruction(i: &str) -> IResult<&str, (String, Vec<usize>)> {
+    let (i, instruction) = alphanumeric1(i)?;
+    let (i, _) = space1(i)?;
+    let (i, vals) = separated_list(tag(" "), usize_val)(i)?;
+    let (i, _) = tag("\n")(i)?;
+    Ok((i, (instruction.to_string(), vals)))
+}
 
-named!(parse<CompleteStr, (usize, Vec<(String, Vec<usize>)>)>, pair!(parse_ip, many1!(parse_instruction)));
+fn parse(i: &str) -> IResult<&str, (usize, Vec<(String, Vec<usize>)>)> {
+    pair(parse_ip, many1(parse_instruction))(i)
+}
 
 fn run_1(input: &str, reg0_start: usize) -> usize {
-    let (_, (ip, instructions)) = parse(CompleteStr(input)).unwrap();
+    let (_, (ip, instructions)) = parse(input).unwrap();
 
     // Init ip register to 0
     let mut regs = vec![0; 6];
@@ -144,12 +149,12 @@ mod tests {
     #[test]
     fn aoc19_parse() {
         assert_eq!(
-            parse_instruction(CompleteStr("addi 2 16 2\n")),
-            Ok((CompleteStr(""), ("addi".to_string(), vec![2, 16, 2])))
+            parse_instruction("addi 2 16 2\n"),
+            Ok(("", ("addi".to_string(), vec![2, 16, 2])))
         );
         assert_eq!(
-            parse_instruction(CompleteStr("seti 1 0 4\n")),
-            Ok((CompleteStr(""), ("seti".to_string(), vec![1, 0, 4])))
+            parse_instruction("seti 1 0 4\n"),
+            Ok(("", ("seti".to_string(), vec![1, 0, 4])))
         );
     }
 }

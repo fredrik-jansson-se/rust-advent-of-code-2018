@@ -1,32 +1,36 @@
-use std::fs;
 use std::collections::HashMap;
+use std::fs;
 
-use std::cmp::Ordering;
-use nom::types::CompleteStr;
+use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::space0;
+use nom::combinator::opt;
+use nom::multi::many1;
 use nom::*;
+use std::cmp::Ordering;
 
+use super::helper::u32_val;
 use chrono::prelude::*;
 
-named!(u32_val<CompleteStr, u32>,
-       map_res!(digit, |s: CompleteStr| { s.parse::<u32>()} )
-       );
-
-named!(date_time<CompleteStr, DateTime<Local>>,
-       do_parse!(
-           tag!("[") >>
-           year: u32_val >>
-           tag!("-") >>
-           month: u32_val >>
-           tag!("-") >>
-           day: u32_val >>
-           space >>
-           hour: u32_val >>
-           tag!(":") >>
-           minute: u32_val >>
-           tag!("]") >>
-           (Local.ymd(year as i32 +500, month, day).and_hms(hour, minute, 0))
-           )
-       );
+fn date_time(i: &str) -> IResult<&str, DateTime<Local>> {
+    let (i, _) = tag("[")(i)?;
+    let (i, year) = u32_val(i)?;
+    let (i, _) = tag("-")(i)?;
+    let (i, month) = u32_val(i)?;
+    let (i, _) = tag("-")(i)?;
+    let (i, day) = u32_val(i)?;
+    let (i, _) = space0(i)?;
+    let (i, hour) = u32_val(i)?;
+    let (i, _) = tag(":")(i)?;
+    let (i, minute) = u32_val(i)?;
+    let (i, _) = tag("]")(i)?;
+    Ok((
+        i,
+        Local
+            .ymd(year as i32 + 500, month, day)
+            .and_hms(hour, minute, 0),
+    ))
+}
 
 #[derive(Debug, PartialEq, Eq)]
 enum Action {
@@ -35,30 +39,29 @@ enum Action {
     BeginsShift(u32),
 }
 
-named!(parse_wakes_up<CompleteStr, Action>, do_parse!(
-       tag!("wakes up") >>
-       (Action::WakesUp)
-       ));
+fn parse_wakes_up(i: &str) -> IResult<&str, Action> {
+    let (i, _) = tag("wakes up")(i)?;
+    Ok((i, Action::WakesUp))
+}
 
-named!(parse_falls_asleep<CompleteStr, Action>, do_parse!(
-        tag!("falls asleep") >>
-        (Action::FallsAsleep)
-        ));
+fn parse_falls_asleep(i: &str) -> IResult<&str, Action> {
+    let (i, _) = tag("falls asleep")(i)?;
+    Ok((i, Action::FallsAsleep))
+}
 
-named!(parse_begins_shift<CompleteStr, Action>, do_parse!(
-        tag!("Guard") >>
-        space >>
-        tag!("#") >>
-        id: u32_val >>
-        space >>
-        tag!("begins shift") >>
-        (Action::BeginsShift(id))
-        ));
+fn parse_begins_shift(i: &str) -> IResult<&str, Action> {
+    let (i, _) = tag("Guard")(i)?;
+    let (i, _) = space0(i)?;
+    let (i, _) = tag("#")(i)?;
+    let (i, id) = u32_val(i)?;
+    let (i, _) = space0(i)?;
+    let (i, _) = tag("begins shift")(i)?;
+    Ok((i, Action::BeginsShift(id)))
+}
 
-named!(
-    action<CompleteStr, Action>,
-    alt!(parse_wakes_up | parse_falls_asleep | parse_begins_shift)
-);
+fn action(i: &str) -> IResult<&str, Action> {
+    alt((parse_wakes_up, parse_falls_asleep, parse_begins_shift))(i)
+}
 
 #[derive(Debug, PartialEq, Eq)]
 struct Line {
@@ -78,15 +81,17 @@ impl Ord for Line {
     }
 }
 
-named!(parse_line<CompleteStr, Line>, do_parse!(
-        dt: date_time >>
-        space >>
-        action: action >>
-        opt!(tag!("\n")) >>
-        (Line { dt, action })
-        ));
+fn parse_line(i: &str) -> IResult<&str, Line> {
+    let (i, dt) = date_time(i)?;
+    let (i, _) = space0(i)?;
+    let (i, action) = action(i)?;
+    let (i, _) = opt(tag("\n"))(i)?;
+    Ok((i, Line { dt, action }))
+}
 
-named!(parse<CompleteStr, Vec<Line>>, many1!(parse_line));
+fn parse(i: &str) -> IResult<&str, Vec<Line>> {
+    many1(parse_line)(i)
+}
 
 /*
 [1518-09-14 00:54] wakes up
@@ -96,7 +101,7 @@ named!(parse<CompleteStr, Vec<Line>>, many1!(parse_line));
 
 pub fn run() {
     let input = fs::read_to_string("day4.txt").unwrap();
-    let (_, mut lines) = parse(CompleteStr(&input)).unwrap();
+    let (_, mut lines) = parse(&input).unwrap();
     lines.sort();
 
     println!("4:1 {}", run_1(&lines));
@@ -107,7 +112,7 @@ fn run_1(lines: &[Line]) -> u32 {
     let mut current_guard = 0;
     let mut sleep_start = 0;
     let mut acc_sleep_time = HashMap::new();
-    let mut sleep_minute_count : HashMap<u32, HashMap<u32, u32>> = HashMap::new();
+    let mut sleep_minute_count: HashMap<u32, HashMap<u32, u32>> = HashMap::new();
     let zero = 0;
     for line in lines {
         match line.action {
@@ -130,18 +135,26 @@ fn run_1(lines: &[Line]) -> u32 {
         }
     }
 
-    let (sleepiest_guard, _) = acc_sleep_time.iter().max_by(|(_, a), (_, b)| a.cmp(b)).unwrap();
-    let (sleepiest_minute, _) = sleep_minute_count.get(&sleepiest_guard).unwrap().iter().max_by(|(_, a), (_, b)| a.cmp(b)).unwrap();
+    let (sleepiest_guard, _) = acc_sleep_time
+        .iter()
+        .max_by(|(_, a), (_, b)| a.cmp(b))
+        .unwrap();
+    let (sleepiest_minute, _) = sleep_minute_count
+        .get(&sleepiest_guard)
+        .unwrap()
+        .iter()
+        .max_by(|(_, a), (_, b)| a.cmp(b))
+        .unwrap();
     // println!("Sleepiest: {:?}", sleepiest_guard);
     // println!("Sleepiest minute: {:?}", sleepiest_minute);
 
-    sleepiest_guard*sleepiest_minute
+    sleepiest_guard * sleepiest_minute
 }
 
 fn run_2(lines: &[Line]) -> u32 {
     let mut current_guard = 0;
     let mut sleep_start = 0;
-    let mut sleep_minute_count : HashMap<u32, HashMap<u32, u32>> = HashMap::new();
+    let mut sleep_minute_count: HashMap<u32, HashMap<u32, u32>> = HashMap::new();
     let zero = 0;
     for line in lines {
         match line.action {
@@ -179,7 +192,7 @@ fn run_2(lines: &[Line]) -> u32 {
     // println!("Sleepiest: {:?}", sleepiest_guard);
     // println!("Sleepiest minute: {:?}", sleepiest_minute);
 
-    sleepiest_guard*sleepiest_minute
+    sleepiest_guard * sleepiest_minute
 }
 
 #[cfg(test)]
@@ -187,52 +200,40 @@ mod tests {
     use super::*;
     #[test]
     fn aoc4_parse_dt() {
-        assert_eq!(u32_val(CompleteStr("123")), Ok((CompleteStr(""), 123)));
+        assert_eq!(u32_val("123"), Ok(("", 123)));
         assert_eq!(
-            date_time(CompleteStr("[1518-09-14 00:54]")),
-            Ok((
-                CompleteStr(""),
-                Local.ymd(1518+500, 9, 14).and_hms(00, 54, 0),
-            ))
+            date_time("[1518-09-14 00:54]"),
+            Ok(("", Local.ymd(1518 + 500, 9, 14).and_hms(00, 54, 0),))
         );
     }
 
     #[test]
     fn aoc4_parse_action() {
+        assert_eq!(parse_wakes_up("wakes up"), Ok(("", Action::WakesUp)));
+        assert_eq!(action("wakes up"), Ok(("", Action::WakesUp)));
         assert_eq!(
-            parse_wakes_up(CompleteStr("wakes up")),
-            Ok((CompleteStr(""), Action::WakesUp))
+            parse_falls_asleep("falls asleep"),
+            Ok(("", Action::FallsAsleep))
+        );
+        assert_eq!(action("falls asleep"), Ok(("", Action::FallsAsleep)));
+        assert_eq!(
+            parse_begins_shift("Guard #373 begins shift"),
+            Ok(("", Action::BeginsShift(373)))
         );
         assert_eq!(
-            action(CompleteStr("wakes up")),
-            Ok((CompleteStr(""), Action::WakesUp))
-        );
-        assert_eq!(
-            parse_falls_asleep(CompleteStr("falls asleep")),
-            Ok((CompleteStr(""), Action::FallsAsleep))
-        );
-        assert_eq!(
-            action(CompleteStr("falls asleep")),
-            Ok((CompleteStr(""), Action::FallsAsleep))
-        );
-        assert_eq!(
-            parse_begins_shift(CompleteStr("Guard #373 begins shift")),
-            Ok((CompleteStr(""), Action::BeginsShift(373)))
-        );
-        assert_eq!(
-            action(CompleteStr("Guard #373 begins shift")),
-            Ok((CompleteStr(""), Action::BeginsShift(373)))
+            action("Guard #373 begins shift"),
+            Ok(("", Action::BeginsShift(373)))
         );
     }
 
     #[test]
     fn aoc4_parse_line() {
         assert_eq!(
-            parse_line(CompleteStr("[1518-04-15 23:58] Guard #373 begins shift")),
+            parse_line("[1518-04-15 23:58] Guard #373 begins shift"),
             Ok((
-                CompleteStr(""),
+                "",
                 Line {
-                    dt: Local.ymd(1518+500, 4, 15).and_hms(23,58,00),
+                    dt: Local.ymd(1518 + 500, 4, 15).and_hms(23, 58, 00),
                     action: Action::BeginsShift(373),
                 }
             ))
@@ -244,12 +245,24 @@ mod tests {
         let input = r#"[1518-09-14 00:54] wakes up
 [1518-04-15 23:58] Guard #373 begins shift
 [1518-07-25 00:53] wakes up"#;
-        let (_, mut lines) = parse(CompleteStr(input)).unwrap();
+        let (_, mut lines) = parse(input).unwrap();
 
         lines.sort();
 
-        assert_eq!(lines[0], Line { dt: Local.ymd(1518 + 500, 4, 15).and_hms(23,58,00), action: Action::BeginsShift(373) });
-        assert_eq!(lines[2], Line { dt: Local.ymd(1518 + 500, 9, 14).and_hms(0, 54, 0), action: Action::WakesUp });
+        assert_eq!(
+            lines[0],
+            Line {
+                dt: Local.ymd(1518 + 500, 4, 15).and_hms(23, 58, 00),
+                action: Action::BeginsShift(373)
+            }
+        );
+        assert_eq!(
+            lines[2],
+            Line {
+                dt: Local.ymd(1518 + 500, 9, 14).and_hms(0, 54, 0),
+                action: Action::WakesUp
+            }
+        );
     }
 
     #[test]
@@ -272,7 +285,7 @@ mod tests {
 [1518-11-05 00:45] falls asleep
 [1518-11-05 00:55] wakes up"#;
 
-        let (_, mut lines) = parse(CompleteStr(input)).unwrap();
+        let (_, mut lines) = parse(input).unwrap();
 
         lines.sort();
 
