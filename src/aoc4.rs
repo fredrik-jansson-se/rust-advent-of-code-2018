@@ -113,23 +113,22 @@ fn run_1(lines: &[Line]) -> u32 {
     let mut sleep_start = 0;
     let mut acc_sleep_time = HashMap::new();
     let mut sleep_minute_count: HashMap<u32, HashMap<u32, u32>> = HashMap::new();
-    let zero = 0;
     for line in lines {
         match line.action {
             Action::BeginsShift(id) => current_guard = id,
             Action::FallsAsleep => sleep_start = line.dt.minute(),
             Action::WakesUp => {
                 let wakeup_time = line.dt.minute();
-                let old = acc_sleep_time.get(&current_guard).unwrap_or(&zero);
-                acc_sleep_time.insert(current_guard, old + wakeup_time - sleep_start);
+                let old = acc_sleep_time.entry(current_guard).or_insert(0);
+                *old += wakeup_time - sleep_start;
 
                 if !sleep_minute_count.contains_key(&current_guard) {
                     sleep_minute_count.insert(current_guard, HashMap::new());
                 }
                 let min_lu = sleep_minute_count.get_mut(&current_guard).unwrap();
                 for minute in sleep_start..wakeup_time {
-                    let min_cnt = min_lu.get(&minute).unwrap_or(&zero);
-                    min_lu.insert(minute, min_cnt + 1);
+                    let min_cnt = min_lu.entry(minute).or_insert(0);
+                    *min_cnt += 1;
                 }
             }
         }

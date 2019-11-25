@@ -25,7 +25,7 @@ mod aoc19;
 mod aoc22;
 // mod aoc23;
 // mod aoc24;
-// mod aoc25;
+mod aoc25;
 mod helper;
 mod opcodes;
 
@@ -62,7 +62,7 @@ fn main() {
         22 => aoc22::run(),
         // 23 => aoc23::run(),
         // 24 => aoc24::run(),
-        // 25 => aoc25::run(),
+        25 => aoc25::run(),
         _ => (),
     }
 }
