@@ -76,11 +76,14 @@ impl WorkItem {
 }
 
 fn print_workers(sec: u32, workers: &[Option<WorkItem>]) {
-    // let names: String = workers
-    //     .iter()
-    //     .map(|ref w| w.map_or(" ".to_owned(), |wi| wi.name.clone()))
-    //     .collect();
-    // println!("{} {}", sec, names);
+    print!("{:03} - ", sec);
+    for w in workers {
+        match w {
+            None => print!(". "),
+            Some(wi) => print!("{} ", &wi.name),
+        }
+    }
+    println!("");
 }
 
 pub fn run_2(input: &str, num_workers: usize, base_cost: usize) -> u32 {
@@ -103,10 +106,15 @@ pub fn run_2(input: &str, num_workers: usize, base_cost: usize) -> u32 {
 
     let mut workers = vec![None; num_workers];
 
-    {
-        let o = open.iter().next().unwrap().clone();
-        open.remove(&o);
-        workers[0] = Some(WorkItem::new(&o, base_cost));
+    for w in workers.iter_mut() {
+        if open.is_empty() {
+            break;
+        }
+        if w.is_none() {
+            let o = open.iter().next().unwrap().clone();
+            open.remove(&o);
+            *w = Some(WorkItem::new(&o, base_cost));
+        }
     }
 
     let mut sum = 0;
@@ -118,6 +126,8 @@ pub fn run_2(input: &str, num_workers: usize, base_cost: usize) -> u32 {
         }
         sum += 1;
         sec += 1;
+
+        print_workers(sec, &workers);
 
         for w in workers.iter_mut() {
             if let Some(wi) = w {
