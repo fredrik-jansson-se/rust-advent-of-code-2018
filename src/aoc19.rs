@@ -10,8 +10,8 @@ use crate::opcodes;
 
 pub fn run() {
     let input = fs::read_to_string("day19.txt").unwrap();
-    // println!("19:1 - {}", run_1(&input, 0));
-    println!("19:2 - {}", run_1(&input, 1));
+    println!("19:1 - {}", run_1(&input, 0));
+    println!("19:2 - {}", run_2(&input, 1));
 }
 
 fn parse_ip(i: &str) -> IResult<&str, usize> {
@@ -96,10 +96,11 @@ fn run_1(input: &str, reg0_start: usize) -> usize {
     regs[0]
 }
 
-fn run_2() -> usize {
-    let mut regs = vec![0, 10550400, 1, 10551374, 0, 0];
+fn run_2(_input: &str, _reg0_start: usize) -> usize {
+    // let mut regs = vec![0, 10550400, 1, 10551374, 0, 0];
 
-    regs[0]
+    // regs[0]
+    0
 }
 
 /*
