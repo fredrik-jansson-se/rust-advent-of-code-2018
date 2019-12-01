@@ -151,14 +151,6 @@ impl Cart {
 
 type Map = Vec<Vec<Option<Position>>>;
 
-fn is_valid((x, y): (isize, isize), map: &Map) -> bool {
-    x >= 0
-        && y >= 0
-        && (y as usize) < map.len()
-        && (x as usize) < map[y as usize].len()
-        && map[y as usize][x as usize].is_some()
-}
-
 fn parse_map(input: &str) -> (Map, Vec<Cart>) {
     let mut max_width = 0;
     let mut map = Map::new();

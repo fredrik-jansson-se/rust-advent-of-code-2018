@@ -1,9 +1,8 @@
+use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::str;
-
-use lazy_static;
 
 pub fn run() {
     let input = fs::read_to_string("day7.txt").unwrap();
