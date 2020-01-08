@@ -1,10 +1,10 @@
 use super::helper::*;
-use nom::branch::{alt, permutation};
+use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until};
-use nom::character::complete::{newline, space0, space1};
+use nom::character::complete::{newline, space0};
 use nom::combinator::{map, opt};
-use nom::multi::{many1, separated_nonempty_list};
-use nom::sequence::{delimited, preceded, terminated};
+use nom::multi::separated_nonempty_list;
+use nom::sequence::{preceded, terminated};
 use nom::IResult;
 use std::fs;
 
